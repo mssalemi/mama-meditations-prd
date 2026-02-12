@@ -1,0 +1,120 @@
+You are Claude acting as a senior Next.js + Supabase engineer. I have an existing Next.js App Router project that currently uses a simple password login and an `admin_authed` cookie to protect `/admin`. I want to replace that with Supabase Auth (Email Magic Link) and add a real “users/admins” concept via an allowlist table. You must implement this end-to-end with production-leaning security, but keep it minimal and shippable.
+
+CONTEXT (current code)
+- Next.js App Router.
+- Existing routes/pages:
+  - `app/admin/login/page.tsx` (password login UI; currently client component that POSTs to `/api/admin/login`)
+  - `app/api/admin/login/route.ts` (sets `admin_authed` cookie)
+  - `middleware.ts` (guards `/admin/*` by checking `admin_authed` cookie; allows `/admin/login`)
+  - `app/admin/page.tsx` (admin dashboard with upload form + list)
+  - `app/api/admin/upload/route.ts` (uploads audio file to Supabase Storage bucket `meditations`, inserts DB row in `meditations` table)
+  - `app/api/admin/meditations/[id]/route.ts` (PATCH title/quote; DELETE removes from storage + DB)
+  - `app/api/admin/logout/route.ts` + `app/admin/logout-button.tsx` (clears `admin_authed` cookie)
+- Supabase:
+  - Storage bucket `meditations` exists (currently public).
+  - Table `meditations` exists with columns:
+    - id uuid pk default gen_random_uuid()
+    - title text not null
+    - quote text
+    - storage_path text not null
+    - public_url text not null
+    - mime_type text not null
+    - created_at timestamptz default now()
+    - published boolean default true
+- ENV:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY` (currently used server-side)
+  - `ADMIN_PASSWORD` (to be deprecated after migration)
+
+GOAL
+Replace password cookie auth with Supabase Auth magic link:
+- Admin logs in via email magic link.
+- Session handled by Supabase cookies (SSR-safe).
+- Middleware protects `/admin/*` by checking:
+  1) user is authenticated (valid Supabase session)
+  2) user email is on an allowlist in Postgres.
+- Remove/stop relying on `admin_authed` cookie.
+- Add logout that signs out Supabase session.
+
+“Users/admins” concept:
+- Create a table `admin_allowlist(email text primary key, created_at timestamptz default now())`
+- Only allowlisted emails can access admin features and API endpoints.
+- Make sure API routes also enforce allowlist (not just middleware).
+
+SECURITY / ARCHITECTURE REQUIREMENTS
+1) Use `@supabase/ssr` to create browser and server clients correctly in App Router.
+2) Prefer NOT using `service_role` for normal requests after migration. Use session-bound server client + RLS/policies.
+3) Turn on RLS for `meditations` and storage objects and add policies so only allowlisted emails can:
+   - insert/select/update/delete meditations rows
+   - upload/delete objects in bucket `meditations`
+4) Convert bucket `meditations` to PRIVATE and stop using `public_url` for playback.
+   - Replace playback with signed URLs generated server-side per request.
+   - You can keep `public_url` column for now but stop depending on it.
+5) Implement `/auth/callback` route to exchange the OAuth code for a session after clicking magic link.
+6) Ensure localhost works:
+   - Supabase Auth URL config must include `http://localhost:3000/auth/callback`
+7) Keep the UX minimal:
+   - `/admin/login` is an email input + “Send magic link”
+   - After user clicks link, lands on `/admin`
+   - Provide a logout button in `/admin`
+
+WHAT TO IMPLEMENT (deliverables)
+A) SQL migrations (as blocks I can paste into Supabase SQL editor)
+- Create `admin_allowlist`
+- Enable RLS on `meditations`
+- Policies for `meditations` table based on allowlisted email (use `auth.jwt() ->> 'email'`)
+- Storage policies for `storage.objects` scoped to bucket_id='meditations' and allowlisted email
+- OPTIONAL: add `owner_user_id uuid` column and set it on insert; if you do, include policies accordingly
+
+B) New / updated Next.js files (write the full code)
+1) `lib/supabaseBrowser.ts` (or similar) using `createBrowserClient`
+2) `lib/supabaseServer.ts` using `createServerClient` and Next.js `cookies()`
+3) Update `middleware.ts`:
+   - For `/admin/*` (except `/admin/login` and `/auth/callback`), verify session exists.
+   - If no session -> redirect to `/admin/login`
+   - If session exists -> check allowlist (query Supabase from middleware OR call a lightweight internal endpoint; pick the most robust approach that works in middleware environment).
+   - If not allowlisted -> redirect to a simple “Not authorized” page.
+4) Update `/admin/login` page:
+   - Client component with email input
+   - Calls `supabase.auth.signInWithOtp`
+   - `emailRedirectTo` set to `${origin}/auth/callback`
+   - Shows “Check your email” message
+5) Create `app/auth/callback/route.ts`:
+   - Exchanges code for session and redirects to `/admin`
+6) Update admin upload/update/delete API routes to enforce allowlist:
+   - Use `createSupabaseServerClient()` (session-bound)
+   - Before doing anything, fetch session user email and verify allowlisted (query `admin_allowlist`)
+   - If not authed or not allowlisted: 401/403
+   - For storage uploads/deletes, use session-bound client
+7) Update `/admin` page and list components as needed:
+   - Replace `public_url` usage with server-generated signed URL for each meditation row.
+   - Either:
+     - add a server function that maps each row to signed url
+     - or add an endpoint `/api/meditations/[id]/signed-url`
+   - Keep UI basically the same but ensure audio player works with signed URLs.
+8) Update logout:
+   - Replace custom cookie clearing
+   - `logout-button.tsx` calls `supabase.auth.signOut()` and redirects to `/admin/login`
+   - Remove `/api/admin/logout` if unnecessary, or leave it but have it call signOut server-side.
+
+C) Notes / instructions
+- Provide exactly what to set in Supabase Auth settings:
+  - Site URL
+  - Redirect URLs
+- Confirm which env vars are still needed after migration.
+- Mention any Next.js middleware limitations you worked around.
+
+CONSTRAINTS
+- Don’t invent any secret keys; use existing env vars.
+- Keep code consistent with App Router conventions.
+- Keep it minimal: no fancy UI libraries.
+- Make sure everything compiles.
+
+OUTPUT FORMAT
+1) “SQL to run in Supabase” section (copy/paste blocks)
+2) “Files to add/update” section with each filepath and full code
+3) “Supabase dashboard settings to configure” section
+4) “Quick test plan” section (steps to verify locally)
+
+Start by inspecting the described folder structure and write the exact diffs/new files accordingly.
