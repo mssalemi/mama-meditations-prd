@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/admin-check";
 
-const ALLOWED_MIME = ["audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg", "audio/aac", "audio/x-m4a"];
+const ALLOWED_MIME = ["audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg", "audio/aac", "audio/x-m4a", "audio/mp4a-latm", "audio/x-caf", "audio/m4a", "audio/x-aac", "audio/webm"];
 
 export async function POST(req: NextRequest) {
   const supabase = await supabaseServer();

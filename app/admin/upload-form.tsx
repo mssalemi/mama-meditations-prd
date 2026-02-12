@@ -71,7 +71,7 @@ export default function UploadForm() {
         <input
           name="file"
           type="file"
-          accept="audio/*"
+          accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.caf,.mp4"
           required
           className="sr-only"
         />
