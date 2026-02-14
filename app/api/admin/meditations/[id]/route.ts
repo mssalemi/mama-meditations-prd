@@ -14,10 +14,12 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const updates: Record<string, string> = {};
+  const updates: Record<string, unknown> = {};
 
   if (typeof body.title === "string") updates.title = body.title;
   if (typeof body.quote === "string") updates.quote = body.quote;
+  if (Array.isArray(body.tags)) updates.tags = body.tags;
+  if (typeof body.transcription === "string") updates.transcription = body.transcription;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

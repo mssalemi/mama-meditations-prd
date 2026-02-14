@@ -15,6 +15,11 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file") as File | null;
   const title = formData.get("title") as string | null;
   const quote = (formData.get("quote") as string) || null;
+  const tagsRaw = (formData.get("tags") as string) || "";
+  const tags = tagsRaw
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
 
   if (!file || !title) {
     return NextResponse.json({ error: "Title and audio file are required" }, { status: 400 });
@@ -46,6 +51,7 @@ export async function POST(req: NextRequest) {
   const { error: dbError } = await supabase.from("meditations").insert({
     title,
     quote,
+    tags,
     storage_path: storagePath,
     public_url: urlData.publicUrl,
     mime_type: file.type,

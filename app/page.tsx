@@ -56,6 +56,17 @@ export default async function Home() {
           src={signedUrlData?.signedUrl ?? ""}
           className="w-full"
         />
+
+        {signedUrlData?.signedUrl && (
+          <a
+            href={signedUrlData.signedUrl}
+            download={`${meditation.title}.m4a`}
+            className="text-sm font-medium text-zinc-400 underline hover:text-zinc-600 dark:hover:text-zinc-300"
+          >
+            Download
+          </a>
+        )}
+
       </main>
     </div>
   );
