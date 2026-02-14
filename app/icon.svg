@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Meditation lotus icon -->
+  <!-- Center petal -->
+  <ellipse cx="16" cy="13" rx="4" ry="9" fill="#a78bfa" opacity="0.9"/>
+  <!-- Left petal -->
+  <ellipse cx="16" cy="13" rx="4" ry="9" fill="#c4b5fd" opacity="0.7" transform="rotate(-30 16 16)"/>
+  <!-- Right petal -->
+  <ellipse cx="16" cy="13" rx="4" ry="9" fill="#c4b5fd" opacity="0.7" transform="rotate(30 16 16)"/>
+  <!-- Outer left petal -->
+  <ellipse cx="16" cy="13" rx="3.5" ry="8" fill="#ddd6fe" opacity="0.5" transform="rotate(-55 16 16)"/>
+  <!-- Outer right petal -->
+  <ellipse cx="16" cy="13" rx="3.5" ry="8" fill="#ddd6fe" opacity="0.5" transform="rotate(55 16 16)"/>
+  <!-- Base arc -->
+  <path d="M6 24 Q16 19 26 24" stroke="#a78bfa" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>
