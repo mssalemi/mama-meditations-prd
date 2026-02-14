@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import AudioPlayer from "./audio-player";
 
 export const dynamic = "force-dynamic";
 
@@ -51,11 +52,7 @@ export default async function Home() {
           </p>
         )}
 
-        <audio
-          controls
-          src={signedUrlData?.signedUrl ?? ""}
-          className="w-full"
-        />
+        <AudioPlayer src={signedUrlData?.signedUrl ?? ""} />
 
         {signedUrlData?.signedUrl && (
           <a

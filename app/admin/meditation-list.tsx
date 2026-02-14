@@ -166,78 +166,92 @@ export default function MeditationList({
         {filteredMeditations.map((m) => (
           <li
             key={m.id}
-            className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow dark:bg-zinc-900"
+            className="flex flex-col gap-2 rounded-xl bg-white px-4 py-3 shadow sm:flex-row sm:items-center sm:gap-3 dark:bg-zinc-900"
           >
-            {/* Play/Stop button */}
-            <button
-              onClick={() => togglePlay(m)}
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              aria-label={playingId === m.id ? "Stop" : "Play"}
-            >
-              {playingId === m.id ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-4 w-4"
-                >
-                  <rect x="5" y="4" width="4" height="12" rx="1" />
-                  <rect x="11" y="4" width="4" height="12" rx="1" />
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-4 w-4"
-                >
-                  <path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.841Z" />
-                </svg>
-              )}
-            </button>
-
-            {/* Title + Tags */}
-            <div className="min-w-0 flex-1">
-              <Link
-                href={`/admin/meditations/${m.id}`}
-                className="truncate font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+            {/* Top row on mobile: title + tags + date */}
+            <div className="flex items-center gap-3 sm:contents">
+              {/* Play/Stop button - desktop only inline */}
+              <button
+                onClick={() => togglePlay(m)}
+                className="hidden sm:flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                aria-label={playingId === m.id ? "Stop" : "Play"}
               >
-                {m.title}
-              </Link>
-              {m.tags.length > 0 && (
-                <div className="mt-0.5 flex flex-wrap gap-1">
-                  {m.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+                {playingId === m.id ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <rect x="5" y="4" width="4" height="12" rx="1" />
+                    <rect x="11" y="4" width="4" height="12" rx="1" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.841Z" />
+                  </svg>
+                )}
+              </button>
+
+              {/* Title + Tags */}
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/admin/meditations/${m.id}`}
+                  className="truncate font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                >
+                  {m.title}
+                </Link>
+                {m.tags.length > 0 && (
+                  <div className="mt-0.5 flex flex-wrap gap-1">
+                    {m.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Date */}
+              <span className="flex-shrink-0 text-xs text-zinc-400">
+                {m.created_at.slice(0, 10)}
+              </span>
             </div>
 
-            {/* Date */}
-            <span className="flex-shrink-0 text-xs text-zinc-400">
-              {m.created_at.slice(0, 10)}
-            </span>
+            {/* Bottom row on mobile: play + actions */}
+            <div className="flex items-center gap-2 sm:contents">
+              {/* Play/Stop button - mobile only */}
+              <button
+                onClick={() => togglePlay(m)}
+                className="flex sm:hidden h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                aria-label={playingId === m.id ? "Stop" : "Play"}
+              >
+                {playingId === m.id ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6">
+                    <rect x="5" y="4" width="4" height="12" rx="1" />
+                    <rect x="11" y="4" width="4" height="12" rx="1" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6">
+                    <path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.841Z" />
+                  </svg>
+                )}
+              </button>
 
-            {/* Actions */}
-            <div className="flex flex-shrink-0 gap-2">
-              <a
-                href={m.audio_url}
-                download={`${m.title}.m4a`}
-                className="rounded-lg border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              >
-                Download
-              </a>
-              <Link
-                href={`/admin/meditations/${m.id}`}
-                className="rounded-lg border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              >
-                Edit
-              </Link>
+              {/* Actions */}
+              <div className="flex flex-shrink-0 gap-2">
+                <a
+                  href={m.audio_url}
+                  download={`${m.title}.m4a`}
+                  className="rounded-lg border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Download
+                </a>
+                <Link
+                  href={`/admin/meditations/${m.id}`}
+                  className="rounded-lg border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Edit
+                </Link>
+              </div>
             </div>
           </li>
         ))}
