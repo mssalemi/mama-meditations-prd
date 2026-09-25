@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Meditation {
   id: string;
@@ -10,6 +11,11 @@ interface Meditation {
   tags: string[];
   audio_url: string;
   created_at: string;
+  featured_on?: string | null;
+}
+
+function todayUTC(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export default function MeditationList({
@@ -17,6 +23,9 @@ export default function MeditationList({
 }: {
   meditations: Meditation[];
 }) {
+  const router = useRouter();
+  const [pinningId, setPinningId] = useState<string | null>(null);
+  const [pinError, setPinError] = useState("");
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,6 +39,30 @@ export default function MeditationList({
       ),
     [meditations]
   );
+
+  // Pin a meditation to today (or unpin it) — the public page checks for a pin
+  // before falling back to the daily rotation.
+  async function toggleToday(id: string, isToday: boolean) {
+    setPinError("");
+    setPinningId(id);
+    try {
+      const res = await fetch(`/api/admin/meditations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featured_on: isToday ? null : todayUTC() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setPinError(data.error ?? "Could not set today's meditation.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setPinError("Could not set today's meditation.");
+    } finally {
+      setPinningId(null);
+    }
+  }
 
   const filteredMeditations = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -88,6 +121,12 @@ export default function MeditationList({
 
   return (
     <>
+      {pinError && (
+        <p className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          {pinError}
+        </p>
+      )}
+
       {/* Search input */}
       <div className="relative mb-3">
         <svg
@@ -237,7 +276,23 @@ export default function MeditationList({
               </button>
 
               {/* Actions */}
-              <div className="flex flex-shrink-0 gap-2">
+              <div className="flex flex-shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleToday(m.id, m.featured_on === todayUTC())}
+                  disabled={pinningId === m.id}
+                  className={`rounded-lg px-3 py-1 text-xs font-medium disabled:opacity-50 ${
+                    m.featured_on === todayUTC()
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "border border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  {pinningId === m.id
+                    ? "Saving..."
+                    : m.featured_on === todayUTC()
+                      ? "★ Playing today"
+                      : "Set as today's"}
+                </button>
                 <a
                   href={m.audio_url}
                   download={`${m.title}.m4a`}
