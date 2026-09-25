@@ -20,6 +20,19 @@ export async function PATCH(
   if (typeof body.quote === "string") updates.quote = body.quote;
   if (Array.isArray(body.tags)) updates.tags = body.tags;
   if (typeof body.transcription === "string") updates.transcription = body.transcription;
+  // null clears the pin; a YYYY-MM-DD string pins this meditation to that day.
+  if (body.featured_on === null || typeof body.featured_on === "string") {
+    updates.featured_on = body.featured_on;
+  }
+
+  // Only one meditation can hold a given day, so clear any existing pin first.
+  if (typeof updates.featured_on === "string") {
+    await supabase
+      .from("meditations")
+      .update({ featured_on: null })
+      .eq("featured_on", updates.featured_on)
+      .neq("id", id);
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(
