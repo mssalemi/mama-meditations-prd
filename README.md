@@ -70,6 +70,20 @@ Open [http://localhost:3000/admin](http://localhost:3000/admin) for the admin da
 
 ## Supabase Setup
 
+**Setting up a fresh project:** run `supabase/000_bootstrap.sql` in the SQL editor.
+It creates both tables, the indexes, RLS, and the private storage bucket in one
+paste, then add admin emails to `admin_allowlist`.
+
+⚠️ **Free-tier projects pause when idle and are eventually deleted.** That is how
+the original project disappeared — the app kept deploying fine and simply showed
+an empty state, because the backend was gone rather than empty. If sign-in fails
+with `DNS_PROBE_FINISHED_NXDOMAIN`, the project no longer exists: create a new
+one, run the bootstrap, and update `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` locally and in
+Vercel. Audio files in the old bucket are gone with it.
+
+### Reference
+
 - **Database table:** `meditations` (id, title, quote, storage_path, published, created_at)
 - **Database table:** `admin_allowlist` (email)
 - **Storage bucket:** `meditations` (private, for audio files)

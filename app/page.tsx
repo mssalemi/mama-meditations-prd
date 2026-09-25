@@ -17,11 +17,34 @@ function todayUTC(): string {
 
 export default async function Home() {
   const supabase = supabaseAdmin();
-  const { data: meditations } = await supabase
+  const { data: meditations, error } = await supabase
     .from("meditations")
     .select("*")
     .eq("published", true)
     .order("created_at", { ascending: true });
+
+  // Discarding this error once cost real debugging time: when the Supabase
+  // project was deleted, every query failed and the page rendered the friendly
+  // "no meditations yet" state, so the site looked merely empty rather than
+  // disconnected. Backend down and library empty are different problems.
+  if (error) {
+    console.error("[meditations] query failed:", error.message);
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6 dark:bg-black">
+        <main className="flex max-w-sm flex-col items-center gap-3 text-center">
+          <h1 className="text-sm font-medium uppercase tracking-widest text-zinc-400">
+            Daily Meditations
+          </h1>
+          <p className="text-lg text-zinc-600 dark:text-zinc-300">
+            Today&apos;s meditation is taking a breath.
+          </p>
+          <p className="text-sm text-zinc-400">
+            Something went wrong on our end. Please try again shortly.
+          </p>
+        </main>
+      </div>
+    );
+  }
 
   if (!meditations?.length) {
     return (
