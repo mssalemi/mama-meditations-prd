@@ -1,107 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase-server";
-import { requireAdmin } from "@/lib/admin-check";
+import { deleteMeditation, updateMeditation } from "@/lib/store";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await supabaseServer();
-  const auth = await requireAdmin(supabase);
-  if (!auth.allowed) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-
   const { id } = await params;
-  const body = await req.json();
-  const updates: Record<string, unknown> = {};
+  const body = await req.json().catch(() => ({}));
+  const updates: Parameters<typeof updateMeditation>[1] = {};
 
   if (typeof body.title === "string") updates.title = body.title;
   if (typeof body.quote === "string") updates.quote = body.quote;
   if (Array.isArray(body.tags)) updates.tags = body.tags;
-  if (typeof body.transcription === "string") updates.transcription = body.transcription;
-  // null clears the pin; a YYYY-MM-DD string pins this meditation to that day.
-  if (body.featured_on === null || typeof body.featured_on === "string") {
-    updates.featured_on = body.featured_on;
-  }
-
-  // Only one meditation can hold a given day, so clear any existing pin first.
-  if (typeof updates.featured_on === "string") {
-    await supabase
-      .from("meditations")
-      .update({ featured_on: null })
-      .eq("featured_on", updates.featured_on)
-      .neq("id", id);
+  if (typeof body.published === "boolean") updates.published = body.published;
+  // null clears the pin; a YYYY-MM-DD string makes this today's meditation.
+  if (body.featuredOn === null || typeof body.featuredOn === "string") {
+    updates.featuredOn = body.featuredOn;
   }
 
   if (Object.keys(updates).length === 0) {
-    return NextResponse.json(
-      { error: "Nothing to update" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from("meditations")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const updated = await updateMeditation(id, updates);
+    if (!updated) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error("[meditations] update failed:", err);
+    return NextResponse.json({ error: "Could not save" }, { status: 500 });
   }
-
-  return NextResponse.json(data);
 }
 
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await supabaseServer();
-  const auth = await requireAdmin(supabase);
-  if (!auth.allowed) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-
   const { id } = await params;
-
-  // Fetch the row to get storage_path
-  const { data: meditation, error: fetchError } = await supabase
-    .from("meditations")
-    .select("storage_path")
-    .eq("id", id)
-    .single();
-
-  if (fetchError || !meditation) {
-    return NextResponse.json(
-      { error: "Meditation not found" },
-      { status: 404 },
-    );
+  try {
+    const removed = await deleteMeditation(id);
+    if (!removed) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[meditations] delete failed:", err);
+    return NextResponse.json({ error: "Could not delete" }, { status: 500 });
   }
-
-  // Delete from storage
-  const { error: storageError } = await supabase.storage
-    .from("meditations")
-    .remove([meditation.storage_path]);
-
-  if (storageError) {
-    return NextResponse.json(
-      { error: storageError.message },
-      { status: 500 },
-    );
-  }
-
-  // Delete from database
-  const { error: dbError } = await supabase
-    .from("meditations")
-    .delete()
-    .eq("id", id);
-
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true });
 }

@@ -1,65 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase-server";
-import { requireAdmin } from "@/lib/admin-check";
+import { addMeditation } from "@/lib/store";
 
-const ALLOWED_MIME = ["audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg", "audio/aac", "audio/x-m4a", "audio/mp4a-latm", "audio/x-caf", "audio/m4a", "audio/x-aac", "audio/webm"];
+// iPhone voice memos arrive with a surprising spread of types, so this stays
+// permissive — the auth gate is the middleware, not the MIME list.
+const ALLOWED_MIME = [
+  "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav", "audio/ogg",
+  "audio/aac", "audio/x-m4a", "audio/mp4a-latm", "audio/x-caf", "audio/m4a",
+  "audio/x-aac", "audio/webm",
+];
 
 export async function POST(req: NextRequest) {
-  const supabase = await supabaseServer();
-  const auth = await requireAdmin(supabase);
-  if (!auth.allowed) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const title = formData.get("title") as string | null;
   const quote = (formData.get("quote") as string) || null;
-  const tagsRaw = (formData.get("tags") as string) || "";
-  const tags = tagsRaw
+  const tags = ((formData.get("tags") as string) || "")
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
 
   if (!file || !title) {
-    return NextResponse.json({ error: "Title and audio file are required" }, { status: 400 });
-  }
-
-  if (!ALLOWED_MIME.includes(file.type)) {
     return NextResponse.json(
-      { error: `Invalid audio type: ${file.type}. Allowed: ${ALLOWED_MIME.join(", ")}` },
+      { error: "Title and audio file are required" },
       { status: 400 },
     );
   }
 
-  const ext = file.name.split(".").pop() ?? "mp3";
-  const storagePath = `audio/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("meditations")
-    .upload(storagePath, file, { contentType: file.type });
-
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  if (file.type && !ALLOWED_MIME.includes(file.type)) {
+    return NextResponse.json(
+      { error: `That file type isn't supported (${file.type}).` },
+      { status: 400 },
+    );
   }
 
-  // Store the path-based URL as a reference (bucket is private, so use signed URLs for playback)
-  const { data: urlData } = supabase.storage
-    .from("meditations")
-    .getPublicUrl(storagePath);
-
-  const { error: dbError } = await supabase.from("meditations").insert({
-    title,
-    quote,
-    tags,
-    storage_path: storagePath,
-    public_url: urlData.publicUrl,
-    mime_type: file.type,
-  });
-
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 });
+  try {
+    await addMeditation({ title, quote, tags, file });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[upload] failed:", err);
+    return NextResponse.json(
+      { error: "Upload failed. Please try again." },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({ ok: true });
 }

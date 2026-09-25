@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { supabaseServer } from "@/lib/supabase-server";
+import { pickForToday, readAll, todayUTC } from "@/lib/store";
 import UploadForm from "../upload-form";
 
 export const dynamic = "force-dynamic";
@@ -13,28 +13,29 @@ function daysSinceEpochUTC() {
 }
 
 export default async function AdminPage() {
-  const supabase = await supabaseServer();
-  const { data: published } = await supabase
-    .from("meditations")
-    .select("id, title")
-    .eq("published", true)
-    .order("created_at", { ascending: true });
+  const all = await readAll().catch(() => []);
+  const published = all
+    .filter((m) => m.published)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
-  const today = daysSinceEpochUTC();
+  // Preview which meditation lands on which day. A pin only ever applies to the
+  // day it names, so only "Today" can differ from the plain rotation.
+  const base = Math.floor(Date.parse(`${todayUTC()}T00:00:00Z`) / 86_400_000);
   const schedule =
-    published && published.length > 0
+    published.length > 0
       ? [
-          { label: "Today", meditation: published[today % published.length] },
+          { label: "Today", meditation: pickForToday(published) ?? published[0] },
           ...Array.from({ length: 5 }, (_, i) => {
             const offset = i + 1;
-            const date = new Date(Date.now() + offset * 86400000);
+            const date = new Date(Date.parse(`${todayUTC()}T00:00:00Z`) + offset * 86_400_000);
             return {
               label: date.toLocaleDateString("en-US", {
                 weekday: "short",
                 month: "short",
                 day: "numeric",
+                timeZone: "UTC",
               }),
-              meditation: published[(today + offset) % published.length],
+              meditation: published[(base + offset) % published.length],
             };
           }),
         ]

@@ -1,26 +1,22 @@
 import Link from "next/link";
-import { supabaseServer } from "@/lib/supabase-server";
+import { readAll } from "@/lib/store";
 import MeditationList from "../../meditation-list";
 
 export const dynamic = "force-dynamic";
 
 export default async function MeditationsPage() {
-  const supabase = await supabaseServer();
-  const { data: meditations } = await supabase
-    .from("meditations")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  // Generate signed URLs for private-bucket audio playback
-  const paths = (meditations ?? []).map((m) => m.storage_path);
-  const { data: signedUrls } = await supabase.storage
-    .from("meditations")
-    .createSignedUrls(paths, 3600);
-
-  const meditationsWithUrls = (meditations ?? []).map((m, i) => ({
-    ...m,
-    audio_url: signedUrls?.[i]?.signedUrl ?? "",
-  }));
+  const all = await readAll();
+  const meditationsWithUrls = [...all]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((m) => ({
+      id: m.id,
+      title: m.title,
+      quote: m.quote,
+      tags: m.tags,
+      audio_url: m.audioUrl,
+      created_at: m.createdAt,
+      featured_on: m.featuredOn,
+    }));
 
   return (
     <>

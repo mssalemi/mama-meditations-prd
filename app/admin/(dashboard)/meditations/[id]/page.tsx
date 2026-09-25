@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase-server";
+import { readAll } from "@/lib/store";
 import MeditationDetail from "./meditation-detail";
 
 export const dynamic = "force-dynamic";
@@ -10,21 +10,11 @@ export default async function MeditationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await supabaseServer();
+  const meditation = (await readAll()).find((m) => m.id === id);
 
-  const { data: meditation, error } = await supabase
-    .from("meditations")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error || !meditation) {
+  if (!meditation) {
     notFound();
   }
-
-  const { data: signedUrlData } = await supabase.storage
-    .from("meditations")
-    .createSignedUrl(meditation.storage_path, 3600);
 
   return (
     <MeditationDetail
@@ -32,10 +22,10 @@ export default async function MeditationPage({
         id: meditation.id,
         title: meditation.title,
         quote: meditation.quote,
-        tags: meditation.tags ?? [],
-        transcription: meditation.transcription ?? null,
-        audio_url: signedUrlData?.signedUrl ?? "",
-        created_at: meditation.created_at,
+        tags: meditation.tags,
+        transcription: null,
+        audio_url: meditation.audioUrl,
+        created_at: meditation.createdAt,
       }}
     />
   );

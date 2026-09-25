@@ -1,4 +1,3 @@
-import { supabaseServer } from "@/lib/supabase-server";
 import LogoutButton from "../logout-button";
 
 export default async function DashboardLayout({
@@ -6,17 +5,13 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-black">
       <header className="border-b border-zinc-200 dark:border-zinc-800">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Hello, <span className="font-medium text-zinc-900 dark:text-zinc-100">{user?.email}</span>
+            <span className="font-medium text-zinc-900 dark:text-zinc-100">Mama Meditations</span>
           </p>
           <LogoutButton />
         </div>

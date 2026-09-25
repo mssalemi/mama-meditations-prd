@@ -49,7 +49,7 @@ export default function MeditationList({
       const res = await fetch(`/api/admin/meditations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ featured_on: isToday ? null : todayUTC() }),
+        body: JSON.stringify({ featuredOn: isToday ? null : todayUTC() }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
