@@ -63,3 +63,11 @@ export function passwordMatches(submitted: string): boolean {
   if (!expected) return false;
   return safeEqual(submitted, expected);
 }
+
+/** Route-level guard. The middleware already gates these paths; this exists so
+ *  a matcher mistake can never again leave an admin route unauthenticated. */
+export async function requireSession(
+  cookies: { get(name: string): { value: string } | undefined },
+): Promise<boolean> {
+  return isValidSession(cookies.get(SESSION_COOKIE)?.value);
+}

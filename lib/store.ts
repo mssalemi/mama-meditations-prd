@@ -47,6 +47,29 @@ async function writeAll(meditations: Meditation[]): Promise<void> {
   });
 }
 
+/** Records metadata for a file the browser already uploaded to Blob. */
+export async function addMeditationFromUrl(input: {
+  title: string;
+  quote: string | null;
+  tags: string[];
+  audioUrl: string;
+  mimeType: string;
+}): Promise<Meditation> {
+  const meditation: Meditation = {
+    id: crypto.randomUUID(),
+    title: input.title,
+    quote: input.quote,
+    tags: input.tags,
+    audioUrl: input.audioUrl,
+    mimeType: input.mimeType,
+    published: true,
+    featuredOn: null,
+    createdAt: new Date().toISOString(),
+  };
+  await writeAll([...(await readAll()), meditation]);
+  return meditation;
+}
+
 export async function addMeditation(input: {
   title: string;
   quote: string | null;

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 
 export default function UploadForm() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [success, setSuccess] = useState(false);
   const [fileName, setFileName] = useState("");
 
@@ -15,20 +17,45 @@ export default function UploadForm() {
     e.preventDefault();
     setError("");
     setSuccess(false);
-    setUploading(true);
+    setProgress(0);
 
     const form = new FormData(e.currentTarget);
+    const file = form.get("file") as File | null;
+    const title = (form.get("title") as string) || "";
 
+    if (!file || !title) {
+      setError("A title and an audio file are required.");
+      return;
+    }
+
+    setUploading(true);
     try {
-      const res = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: form,
+      // Straight from the browser to Blob storage. Routing the file through the
+      // server would cap it at 4.5MB, which no real recording fits under.
+      const blob = await upload(file.name, file, {
+        access: "public",
+        handleUploadUrl: "/api/admin/upload",
+        onUploadProgress: ({ percentage }) => setProgress(Math.round(percentage)),
       });
 
-      const data = await res.json();
+      const res = await fetch("/api/admin/meditations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          quote: (form.get("quote") as string) || null,
+          tags: ((form.get("tags") as string) || "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          audioUrl: blob.url,
+          mimeType: file.type,
+        }),
+      });
 
       if (!res.ok) {
-        setError(data.error ?? "Upload failed");
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Saved the audio but couldn't save the details.");
         return;
       }
 
@@ -36,10 +63,13 @@ export default function UploadForm() {
       setFileName("");
       formRef.current?.reset();
       router.refresh();
-    } catch {
-      setError("Upload failed");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Upload failed. Please try again.",
+      );
     } finally {
       setUploading(false);
+      setProgress(0);
     }
   }
 
@@ -55,7 +85,9 @@ export default function UploadForm() {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {success && (
-        <p className="text-sm text-green-600">Meditation uploaded successfully!</p>
+        <p className="text-sm text-green-600">
+          Uploaded — it&apos;s live on the site now.
+        </p>
       )}
 
       <input
@@ -68,7 +100,7 @@ export default function UploadForm() {
 
       <textarea
         name="quote"
-        placeholder="Quote (optional)"
+        placeholder="A few words about it (optional)"
         rows={2}
         className="rounded-lg border border-zinc-300 px-4 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
       />
@@ -81,11 +113,7 @@ export default function UploadForm() {
       />
 
       <div className="flex flex-col gap-2">
-        <label className="flex cursor-pointer items-center gap-2 self-start rounded-lg border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-600 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-400 dark:hover:text-zinc-200">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z" />
-            <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
-          </svg>
+        <label className="flex cursor-pointer items-center gap-2 self-start rounded-lg border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-600 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-400">
           Choose Audio File
           <input
             name="file"
@@ -103,12 +131,24 @@ export default function UploadForm() {
         )}
       </div>
 
+      {uploading && (
+        <div className="flex flex-col gap-1">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div
+              className="h-full bg-zinc-900 transition-all dark:bg-zinc-100"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-xs text-zinc-500">Uploading… {progress}%</p>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={uploading}
-        className="self-start rounded-lg bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        className="self-start rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
       >
-        {uploading ? "Uploading..." : "Upload"}
+        {uploading ? "Uploading…" : "Upload"}
       </button>
     </form>
   );
