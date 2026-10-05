@@ -23,7 +23,6 @@ export default async function MeditationPage({
         title: meditation.title,
         quote: meditation.quote,
         tags: meditation.tags,
-        transcription: null,
         audio_url: meditation.audioUrl,
         created_at: meditation.createdAt,
       }}

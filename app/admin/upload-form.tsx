@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
+import TagPicker from "./tag-picker";
 
 export default function UploadForm() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function UploadForm() {
   const [progress, setProgress] = useState(0);
   const [success, setSuccess] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -44,10 +46,7 @@ export default function UploadForm() {
         body: JSON.stringify({
           title,
           quote: (form.get("quote") as string) || null,
-          tags: ((form.get("tags") as string) || "")
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean),
+          tags,
           audioUrl: blob.url,
           mimeType: file.type,
         }),
@@ -61,6 +60,7 @@ export default function UploadForm() {
 
       setSuccess(true);
       setFileName("");
+      setTags([]);
       formRef.current?.reset();
       router.refresh();
     } catch (err) {
@@ -101,16 +101,12 @@ export default function UploadForm() {
       <textarea
         name="quote"
         placeholder="A few words about it (optional)"
+        aria-label="Description"
         rows={2}
         className="rounded-lg border border-zinc-300 px-4 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
       />
 
-      <input
-        name="tags"
-        type="text"
-        placeholder="Tags (comma-separated, e.g. morning, gratitude)"
-        className="rounded-lg border border-zinc-300 px-4 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-      />
+      <TagPicker selected={tags} onChange={setTags} />
 
       <div className="flex flex-col gap-2">
         <label className="flex cursor-pointer items-center gap-2 self-start rounded-lg border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-600 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-400">

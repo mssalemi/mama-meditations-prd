@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import TagPicker from "@/app/admin/tag-picker";
 
 interface Meditation {
   id: string;
   title: string;
   quote: string | null;
   tags: string[];
-  transcription: string | null;
   audio_url: string;
   created_at: string;
 }
@@ -23,8 +23,7 @@ export default function MeditationDetail({
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(meditation.title);
   const [editQuote, setEditQuote] = useState(meditation.quote ?? "");
-  const [editTags, setEditTags] = useState(meditation.tags.join(", "));
-  const [editTranscription, setEditTranscription] = useState(meditation.transcription ?? "");
+  const [editTags, setEditTags] = useState<string[]>(meditation.tags);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -38,8 +37,7 @@ export default function MeditationDetail({
         body: JSON.stringify({
           title: editTitle,
           quote: editQuote,
-          tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
-          transcription: editTranscription,
+          tags: editTags,
         }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -82,30 +80,15 @@ export default function MeditationDetail({
               onChange={(e) => setEditTitle(e.target.value)}
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
             />
-            <label className="text-xs font-medium text-zinc-500">Quote</label>
+            <label className="text-xs font-medium text-zinc-500">Description</label>
             <input
               type="text"
               value={editQuote}
               onChange={(e) => setEditQuote(e.target.value)}
-              placeholder="Quote (optional)"
+              placeholder="A few words about it (optional)"
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
             />
-            <label className="text-xs font-medium text-zinc-500">Tags (comma-separated)</label>
-            <input
-              type="text"
-              value={editTags}
-              onChange={(e) => setEditTags(e.target.value)}
-              placeholder="e.g. morning, gratitude, breathing"
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            />
-            <label className="text-xs font-medium text-zinc-500">Transcription</label>
-            <textarea
-              value={editTranscription}
-              onChange={(e) => setEditTranscription(e.target.value)}
-              placeholder="Transcription (optional)"
-              rows={5}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            />
+            <TagPicker selected={editTags} onChange={setEditTags} />
             <div className="flex gap-2">
               <button
                 onClick={saveEdit}
@@ -119,8 +102,7 @@ export default function MeditationDetail({
                   setEditing(false);
                   setEditTitle(meditation.title);
                   setEditQuote(meditation.quote ?? "");
-                  setEditTags(meditation.tags.join(", "));
-                  setEditTranscription(meditation.transcription ?? "");
+                  setEditTags(meditation.tags);
                 }}
                 disabled={saving}
                 className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -154,15 +136,6 @@ export default function MeditationDetail({
             <p className="mt-1 text-xs text-zinc-400">
               {new Date(meditation.created_at).toLocaleDateString()}
             </p>
-            {meditation.transcription && (
-              <div className="mt-4">
-                <p className="text-xs font-medium text-zinc-500">Transcription</p>
-                <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
-                  {meditation.transcription}
-                </p>
-              </div>
-            )}
-
             <audio
               controls
               src={meditation.audio_url}
